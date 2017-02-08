@@ -45,7 +45,7 @@ this.$.ajax.generateRequest().then(response => {
       params="{{params}}"
       sync="{{sync}}"
       bubbles="{{bubbles}}"
-      url="{{_signedUrl}}"></iron-ajax>
+      url="{{_url}}"></iron-ajax>
 
   </template>
   <script>
@@ -168,7 +168,7 @@ this.$.ajax.generateRequest().then(response => {
 
             bubbles: {
               type: Boolean,
-              value: false
+              value: false,
             },
 
             /**
@@ -181,18 +181,19 @@ this.$.ajax.generateRequest().then(response => {
               notify: true,
             },
 
-            _rootEndpoint: {
+            /**
+             * When defined, it will listen to session-update-${signalName}
+             * and update session params based on the event data
+             * @type {String}
+             */
+            signalName: {
               type: String,
-              computed: '_computeRootEndpoint(apiEndpoint)'
+              observer: '_signalNameChanged'
             },
 
             _url: {
               type: String,
-              computed: '_computeUrl(_rootEndpoint, path)'
-            },
-
-            _signedUrl: {
-              type: String,
+              computed: '_computeUrl(apiEndpoint, path)',
             },
 
             _signedHeaders: {
@@ -201,6 +202,11 @@ this.$.ajax.generateRequest().then(response => {
 
           }
         };
+      }
+
+      constructor() {
+        super();
+        this._signalReceived = this._signalReceived.bind(this);
       }
 
       connectedCallback() {
@@ -215,8 +221,6 @@ this.$.ajax.generateRequest().then(response => {
        */
       generateRequest() {
         if (this._url) {
-          this._signedUrl = this._url;
-
           // We can only sign request if all of this is defined
           if (this.region && this.accessKeyId && this.secretKey &&this.sessionToken) {
             this._signedHeaders = this._generateSignedHeaders();
@@ -230,19 +234,52 @@ this.$.ajax.generateRequest().then(response => {
         return Promise.reject(new Error('Invalid url'));
       }
 
-      _computeRootEndpoint(apiEndpoint) {
-        if (apiEndpoint) {
-          return /(^https?:\/\/[^\/]+)/g.exec(apiEndpoint)[1];
+      _signalNameChanged(signalName, old) {
+        if (old) {
+          const eventName = 'session-updated-' + old;
+          window.removeEventListener(eventName, this._signalReceived);
+        }
+
+        if (signalName) {
+          const eventName = 'session-updated-' + this.signalName;
+          window.addEventListener(eventName, this._signalReceived);
         }
       }
 
-      _computeUrl(rootEndpoint, path) {
-        if (rootEndpoint && path) {
-          const filter = x => !!x;
-          const SLASH = '/';
+      _signalReceived(event) {
+        const {region, accessKeyId, secretKey, sessionToken,
+          apiEndpoint, signedIn} = event.detail;
 
-          return rootEndpoint + SLASH +
-            path.split(SLASH).filter(filter).join(SLASH);
+        this.apiEndpoint = apiEndpoint;
+        this.region = region;
+
+        if (signedIn === false) {
+          this.accessKeyId = '';
+          this.secretKey = '';
+          this.sessionToken = '';
+        } else {
+          this.accessKeyId = accessKeyId;
+          this.secretKey = secretKey;
+          this.sessionToken = sessionToken;
+        }
+      }
+
+      _getOriginFromUrl(url) {
+        return /(^https?:\/\/[^\/]+)/g.exec(url)[1];
+      }
+
+      _getPathFromUrl(url) {
+        return /(^https?:\/\/[^\/]+)\/(.*)/g.exec(url)[2] || '';
+      }
+
+      _joinPath(...paths) {
+        const SLASH = '/';
+        return paths.join(SLASH).split(SLASH).filter(x => !!x).join(SLASH);
+      }
+
+      _computeUrl(apiEndpoint, path) {
+        if (apiEndpoint && path) {
+          return this._joinPath(apiEndpoint, path);
         }
       }
 
@@ -279,11 +316,15 @@ this.$.ajax.generateRequest().then(response => {
         const datetime = this._generateDateString();
         headers['x-amz-date'] = datetime;
 
+        const origin = this._getOriginFromUrl(this.apiEndpoint);
+        const pathFromEndpoint = this._getPathFromUrl(this.apiEndpoint);
+        const path = '/' + this._joinPath(pathFromEndpoint, this.path);
+
         const parser = document.createElement('a');
-        parser.href = this._rootEndpoint;
+        parser.href = origin;
         headers['host'] = parser.hostname;
 
-        const canonicalRequest = this._buildCanonicalRequest(this.method, this.path, queryParams, headers, this.body);
+        const canonicalRequest = this._buildCanonicalRequest(this.method, path, queryParams, headers, this.body);
         const hashedCanonicalRequest = this._hashCanonicalRequest(canonicalRequest);
         const credentialScope = this._buildCredentialScope(datetime, this.region, 'execute-api');
         const stringToSign = this._buildStringToSign(datetime, credentialScope, hashedCanonicalRequest);
