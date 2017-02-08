@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>aws-sv4-ajax demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../aws-sv4-ajax.html">
+    <link rel="import" href="../../aws-sv4-ajax/aws-sv4-ajax.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Basic aws-sv4-ajax demo</h3>
+
+      <demo-snippet>
+        <template>
+
+          <serverless-auth
+            id="auth"
+            api-endpoint="localhost"
+            google-client-id="googleClientId"
+            region="{{_region}}"
+            access-key-id="{{_accessKeyId}}"
+            secret-key="{{_secretKey}}"
+            signed-in="{{signedIn}}"
+            loading={{loading}}
+            session-token="{{_sessionToken}}"></serverless-auth>
+
+          <aws-sv4-ajax
+              id="ajax"
+              api-endpoint="localhost"
+              region="[[_region]]"
+              access-key-id="[[_accessKeyId]]"
+              secret-key="[[_secretKey]]"
+              loading={{loading}}
+              session-token="[[_sessionToken]]"></aws-sv4-ajax>
+
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>

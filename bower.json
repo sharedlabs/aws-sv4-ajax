@@ -1,0 +1,13 @@
+{
+  "name": "aws-sv4-ajax",
+  "description": "Iron-Ajax wrapper for signing requests for AWS private APIG endpoints",
+  "main": "aws-sv4-ajax.html",
+  "dependencies": {
+    "polymer": "Polymer/polymer#2.0-preview"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#2.0-preview",
+    "serverless-auth": "git@github.com:sharedlabs/serverless-auth.git",
+    "webcomponentsjs": "v1"
+  }
+}

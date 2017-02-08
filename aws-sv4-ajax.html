@@ -1,0 +1,423 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="./hmac-sha256.html">
+
+<!--
+Iron Ajax wrapper that signs the request using AWS signature version 4 before
+sending it.
+
+Auto option is removed for simplicity.
+
+```
+<aws-sv4-ajax
+    id="ajax"
+    api-endpoint="https://id.execute-api.eu-central-1.amazonaws.com/dev"
+    path="apipath"
+    method="get"
+    params='{"foo":"bar"}'
+    handle-as="json"
+    region="eu-central-1"
+    access-key-id="ASIAJUJT9T0JQ64J22RJ"
+    secret-key="cTig+gy0LjjDfjcL3S1kd6w+8SFovw7MyDVLBSId"
+    session-token="AgoGb3JpZ2luENT//////wEaDGV1LWNlbnRyYWwtMSKAAhz80TDA..."></aws-sv4-ajax>
+```
+
+```
+this.$.ajax.generateRequest().then(response => {
+  console.log(response);
+});
+```
+
+@pseudoElement aws-sv4-ajax
+@demo demo/index.html
+-->
+
+<dom-module id="aws-sv4-ajax">
+  <template>
+
+    <iron-ajax
+      id="ironAjax"
+      content-type="{{contentType}}"
+      handle-as="{{handleAs}}"
+      headers="{{_signedHeaders}}"
+      loading="{{loading}}"
+      method="{{method}}"
+      params="{{params}}"
+      sync="{{sync}}"
+      bubbles="{{bubbles}}"
+      url="{{_signedUrl}}"></iron-ajax>
+
+  </template>
+  <script>
+
+    class AwsSv4 extends Polymer.Element {
+
+      static get is() {return 'aws-sv4-ajax';}
+
+      static get config() {
+        return {
+          properties: {
+
+            /**
+             * Api endpoint
+             *
+             * @type {String}
+             */
+            apiEndpoint: String,
+
+            /**
+             * AWS api endpoint region. If not passed a non signed request
+             * will be performed.
+             *
+             * @type {String?}
+             */
+            region: String,
+
+            /**
+             * User session AccessKeyId. If not passed a non signed request
+             * will be performed.
+             *
+             * @type {String?}
+             */
+            accessKeyId: String,
+
+            /**
+             * User session secretKey. If not passed a non signed request
+             * will be performed.
+             *
+             * @type {String?}
+             */
+            secretKey: String,
+
+            /**
+             * User session token. If not passed a non signed request
+             * will be performed.
+             *
+             * @type {String?}
+             */
+            sessionToken: String,
+
+            /**
+             * Accept type header
+             *
+             * @type {String?}
+             */
+            acceptType: {
+              type: String,
+              value: 'application/json',
+            },
+
+            /**
+             * Path from the api endpoint
+             *
+             * @type {String}
+             */
+            path: String,
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {String}
+             */
+            method: String,
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {Object}
+             */
+            params: Object,
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {Object}
+             */
+            body: Object,
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {Object}
+             */
+            headers: Object,
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {String}
+             */
+            contentType: {
+              type: String,
+              value: 'application/json',
+            },
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {String}
+             */
+            handleAs: String,
+
+            /**
+             * More info on iron-ajax doc.
+             *
+             * @type {Boolean}
+             */
+            sync: Boolean,
+
+            bubbles: {
+              type: Boolean,
+              value: false
+            },
+
+            /**
+             * True while there is a request in flight
+             *
+             * @type {Boolean}
+             */
+            loading: {
+              type: Boolean,
+              notify: true,
+            },
+
+            _rootEndpoint: {
+              type: String,
+              computed: '_computeRootEndpoint(apiEndpoint)'
+            },
+
+            _url: {
+              type: String,
+              computed: '_computeUrl(_rootEndpoint, path)'
+            },
+
+            _signedUrl: {
+              type: String,
+            },
+
+            _signedHeaders: {
+              type: Object
+            }
+
+          }
+        };
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+      }
+
+      /**
+       * Performs the ajax request to the computed url of apiEndpoint + path
+       * generating the appropiate signature
+       *
+       * @return {Object} Promise that resolves to the response
+       */
+      generateRequest() {
+        if (this._url) {
+          this._signedUrl = this._url;
+
+          // We can only sign request if all of this is defined
+          if (this.region && this.accessKeyId && this.secretKey &&this.sessionToken) {
+            this._signedHeaders = this._generateSignedHeaders();
+          }
+
+          return this.$.ironAjax.generateRequest().completes.then(res => {
+            return this.$.ironAjax.lastResponse;
+          });
+        }
+
+        return Promise.reject(new Error('Invalid url'));
+      }
+
+      _computeRootEndpoint(apiEndpoint) {
+        if (apiEndpoint) {
+          return /(^https?:\/\/[^\/]+)/g.exec(apiEndpoint)[1];
+        }
+      }
+
+      _computeUrl(rootEndpoint, path) {
+        if (rootEndpoint && path) {
+          const filter = x => !!x;
+          const SLASH = '/';
+
+          return rootEndpoint + SLASH +
+            path.split(SLASH).filter(filter).join(SLASH);
+        }
+      }
+
+      _generateDateString() {
+        return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+          .replace(/[:\-]|\.\d{3}/g, '');
+      }
+
+      _generateSignedHeaders() {
+        const queryParams = this.params || {};
+        const headers = this.headers || {};
+        // let body = this.body;
+
+        headers['Content-Type'] = headers['Content-Type'] || this.contentType;
+        headers['Accept'] = headers['Accept'] || this.acceptType;
+
+        if (!this.body) {
+          delete headers['Content-Type'];
+        }
+
+        // // Override request body and set to empty when signing GET requests
+        // if (body === undefined || this.method === 'GET') {
+        //   body = '';
+        // } else {
+        //   body = JSON.stringify(body);
+        // }
+
+        // // If there is no body remove the content-type header so it is not
+        // // included in SigV4 calculation
+        // if (body === '' || body === undefined || body === null) {
+        //   delete headers['Content-Type'];
+        // }
+
+        const datetime = this._generateDateString();
+        headers['x-amz-date'] = datetime;
+
+        const parser = document.createElement('a');
+        parser.href = this._rootEndpoint;
+        headers['host'] = parser.hostname;
+
+        const canonicalRequest = this._buildCanonicalRequest(this.method, this.path, queryParams, headers, this.body);
+        const hashedCanonicalRequest = this._hashCanonicalRequest(canonicalRequest);
+        const credentialScope = this._buildCredentialScope(datetime, this.region, 'execute-api');
+        const stringToSign = this._buildStringToSign(datetime, credentialScope, hashedCanonicalRequest);
+        const signingKey = this._calculateSigningKey(this.secretKey, datetime, this.region, 'execute-api');
+        const signature = this._calculateSignature(signingKey, stringToSign);
+
+        headers['Authorization'] = this._buildAuthorizationHeader(this.accessKeyId,
+          credentialScope, headers, signature);
+
+        if (this.sessionToken !== undefined && this.sessionToken !== '') {
+          headers['x-amz-security-token'] = this.sessionToken.trim();
+        }
+        delete headers['host'];
+
+        const queryString = this._buildCanonicalQueryString(queryParams);
+
+        // Need to re-attach Content-Type if it is not specified at this point
+        if (headers['Content-Type'] === undefined) {
+          headers['Content-Type'] = this.contentType;
+        }
+        return headers;
+      }
+
+      _hash(value) {
+        return CryptoJS.SHA256(value);
+      }
+
+      _hexEncode(value) {
+        return value.toString(CryptoJS.enc.Hex);
+      }
+
+      _hmac(secret, value) {
+        return CryptoJS.HmacSHA256(value, secret, {asBytes: true});
+      }
+
+      _buildCanonicalRequest(method, path, queryParams, headers, payload) {
+        return method + '\n' +
+          this._buildCanonicalUri(path) + '\n' +
+          this._buildCanonicalQueryString(queryParams) + '\n' +
+          this._buildCanonicalHeaders(headers) + '\n' +
+          this._buildCanonicalSignedHeaders(headers) + '\n' +
+          this._hexEncode(this._hash(payload));
+      }
+
+      _buildCanonicalQueryString(queryParams) {
+        if (Object.keys(queryParams).length < 1) {
+          return '';
+        }
+
+        const sortedQueryParams = [];
+        for (let property in queryParams) {
+          if (queryParams.hasOwnProperty(property)) {
+            sortedQueryParams.push(property);
+          }
+        }
+        sortedQueryParams.sort();
+
+        let canonicalQueryString = '';
+        for (let i = 0; i < sortedQueryParams.length; i++) {
+          canonicalQueryString += sortedQueryParams[i] + '=' +
+            encodeURIComponent(queryParams[sortedQueryParams[i]]) + '&';
+        }
+        return canonicalQueryString.substr(0, canonicalQueryString.length - 1);
+      }
+
+      _buildCanonicalHeaders(headers) {
+        let canonicalHeaders = '';
+        let sortedKeys = [];
+
+        for (let property in headers) {
+          if (headers.hasOwnProperty(property)) {
+            sortedKeys.push(property);
+          }
+        }
+        sortedKeys.sort();
+
+        for (let i = 0; i < sortedKeys.length; i++) {
+          canonicalHeaders += sortedKeys[i].toLowerCase() + ':' +
+            headers[sortedKeys[i]] + '\n';
+        }
+        return canonicalHeaders;
+      }
+
+      _hashCanonicalRequest(request) {
+        return this._hexEncode(this._hash(request));
+      }
+
+      _buildCanonicalUri(uri) {
+        return encodeURI(uri);
+      }
+
+      _buildCanonicalSignedHeaders(headers) {
+        const sortedKeys = [];
+
+        for (let property in headers) {
+          if (headers.hasOwnProperty(property)) {
+            sortedKeys.push(property.toLowerCase());
+          }
+        }
+        return sortedKeys.sort().join(';');
+      }
+
+      _buildStringToSign(datetime, credentialScope, hashedCanonicalRequest) {
+        return 'AWS4-HMAC-SHA256' + '\n' +
+          datetime + '\n' +
+          credentialScope + '\n' +
+          hashedCanonicalRequest;
+      }
+
+      _buildCredentialScope(datetime, region, service) {
+        return `${datetime.substr(0, 8)}/${region}/${service}/aws4_request`
+      }
+
+      _calculateSigningKey(secretKey, datetime, region, service) {
+        return this._hmac(this._hmac(this._hmac(this._hmac(
+          'AWS4' + secretKey, datetime.substr(0, 8)), region), service),
+          'aws4_request');
+      }
+
+      _calculateSignature(key, stringToSign) {
+        return this._hexEncode(this._hmac(key, stringToSign));
+      }
+
+      _buildAuthorizationHeader(accessKeyId, credentialScope, headers, signature) {
+        const canonicalHeaders = this._buildCanonicalSignedHeaders(headers);
+        return 'AWS4-HMAC-SHA256' + ' Credential=' + accessKeyId +
+          '/' + credentialScope +
+          ', SignedHeaders=' + canonicalHeaders +
+          ', Signature=' + signature;
+      }
+
+    }
+
+    customElements.define(AwsSv4.is, AwsSv4);
+
+  </script>
+</dom-module>
