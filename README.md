@@ -1,4 +1,4 @@
-# Polymer 2 \<aws-sv4-ajax\>
+# \<aws-sv4-ajax\> using Polymer 2 
 
 Iron-Ajax wrapper for signing requests for AWS private APIG endpoints using
 Polymer 2
@@ -6,7 +6,7 @@ Polymer 2
 
 ## Example
 
-```
+```html
 <aws-sv4-ajax
     id="ajax"
     api-endpoint="https://id.execute-api.eu-central-1.amazonaws.com/dev"
@@ -21,7 +21,7 @@ Polymer 2
 
 ```
 
-```
+```js
 this.$.ajax.generateRequest().then(response => {
   console.log(response);
 });
