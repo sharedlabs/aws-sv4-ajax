@@ -32,439 +32,447 @@ this.$.ajax.generateRequest().then(response => {
 @pseudoElement aws-sv4-ajax
 @demo demo/index.html
 -->
+<script>
 
-<dom-module id="aws-sv4-ajax">
-  <template>
+  class AwsSv4 extends Polymer.Element {
 
-    <iron-ajax
-      id="ironAjax"
-      content-type="{{contentType}}"
-      handle-as="{{handleAs}}"
-      headers="{{_signedHeaders}}"
-      loading="{{loading}}"
-      method="{{method}}"
-      params="{{params}}"
-      sync="{{sync}}"
-      bubbles="{{bubbles}}"
-      url="{{_url}}"></iron-ajax>
+    static get is() {return 'aws-sv4-ajax';}
 
-  </template>
-  <script>
+    static get config() {
+      return {
+        properties: {
 
-    class AwsSv4 extends Polymer.Element {
+          /**
+           * Api endpoint
+           *
+           * @type {String}
+           */
+          apiEndpoint: String,
 
-      static get is() {return 'aws-sv4-ajax';}
+          /**
+           * AWS api endpoint region. If not passed a non signed request
+           * will be performed.
+           *
+           * @type {String?}
+           */
+          region: String,
 
-      static get config() {
-        return {
-          properties: {
+          /**
+           * User session AccessKeyId. If not passed a non signed request
+           * will be performed.
+           *
+           * @type {String?}
+           */
+          accessKeyId: String,
 
-            /**
-             * Api endpoint
-             *
-             * @type {String}
-             */
-            apiEndpoint: String,
+          /**
+           * User session secretKey. If not passed a non signed request
+           * will be performed.
+           *
+           * @type {String?}
+           */
+          secretKey: String,
 
-            /**
-             * AWS api endpoint region. If not passed a non signed request
-             * will be performed.
-             *
-             * @type {String?}
-             */
-            region: String,
+          /**
+           * User session token. If not passed a non signed request
+           * will be performed.
+           *
+           * @type {String?}
+           */
+          sessionToken: String,
 
-            /**
-             * User session AccessKeyId. If not passed a non signed request
-             * will be performed.
-             *
-             * @type {String?}
-             */
-            accessKeyId: String,
+          /**
+           * Accept type header
+           *
+           * @type {String?}
+           */
+          acceptType: {
+            type: String,
+            value: 'application/json',
+          },
 
-            /**
-             * User session secretKey. If not passed a non signed request
-             * will be performed.
-             *
-             * @type {String?}
-             */
-            secretKey: String,
+          /**
+           * Path from the api endpoint
+           *
+           * @type {String}
+           */
+          path: String,
 
-            /**
-             * User session token. If not passed a non signed request
-             * will be performed.
-             *
-             * @type {String?}
-             */
-            sessionToken: String,
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {String}
+           */
+          method: String,
 
-            /**
-             * Accept type header
-             *
-             * @type {String?}
-             */
-            acceptType: {
-              type: String,
-              value: 'application/json',
-            },
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {Object}
+           */
+          params: Object,
 
-            /**
-             * Path from the api endpoint
-             *
-             * @type {String}
-             */
-            path: String,
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {Object}
+           */
+          body: Object,
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {String}
-             */
-            method: String,
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {Object}
+           */
+          headers: Object,
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {Object}
-             */
-            params: Object,
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {String}
+           */
+          contentType: {
+            type: String,
+            value: 'application/json',
+          },
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {Object}
-             */
-            body: Object,
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {String}
+           */
+          handleAs: String,
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {Object}
-             */
-            headers: Object,
+          /**
+           * More info on iron-ajax doc.
+           *
+           * @type {Boolean}
+           */
+          sync: Boolean,
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {String}
-             */
-            contentType: {
-              type: String,
-              value: 'application/json',
-            },
+          bubbles: {
+            type: Boolean,
+            value: false,
+          },
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {String}
-             */
-            handleAs: String,
+          /**
+           * True while there is a request in flight
+           *
+           * @type {Boolean}
+           */
+          loading: {
+            type: Boolean,
+            notify: true,
+          },
 
-            /**
-             * More info on iron-ajax doc.
-             *
-             * @type {Boolean}
-             */
-            sync: Boolean,
+          /**
+           * When defined, it will listen to session-update-${signalName}
+           * and update session params based on the event data
+           * @type {String}
+           */
+          signalName: {
+            type: String,
+            observer: '_signalNameChanged'
+          },
 
-            bubbles: {
-              type: Boolean,
-              value: false,
-            },
+          _url: {
+            type: String,
+            computed: '_computeUrl(apiEndpoint, path)',
+          },
 
-            /**
-             * True while there is a request in flight
-             *
-             * @type {Boolean}
-             */
-            loading: {
-              type: Boolean,
-              notify: true,
-            },
-
-            /**
-             * When defined, it will listen to session-update-${signalName}
-             * and update session params based on the event data
-             * @type {String}
-             */
-            signalName: {
-              type: String,
-              observer: '_signalNameChanged'
-            },
-
-            _url: {
-              type: String,
-              computed: '_computeUrl(apiEndpoint, path)',
-            },
-
-            _signedHeaders: {
-              type: Object
-            }
-
-          }
-        };
-      }
-
-      constructor() {
-        super();
-        this._signalReceived = this._signalReceived.bind(this);
-      }
-
-      /**
-       * Performs the ajax request to the computed url of apiEndpoint + path
-       * generating the appropiate signature
-       *
-       * @return {Object} Promise that resolves to the response
-       */
-      generateRequest() {
-        if (this._url) {
-          // We can only sign request if all of this is defined
-          if (this.region && this.accessKeyId && this.secretKey &&this.sessionToken) {
-            this._signedHeaders = this._generateSignedHeaders();
+          _signedHeaders: {
+            type: Object
           }
 
-          return this.$.ironAjax.generateRequest().completes.then(res => {
-            return res.response;
-          });
         }
-
-        return Promise.reject(new Error('Invalid url'));
-      }
-
-      _signalNameChanged(signalName, old) {
-        if (old) {
-          const eventName = old + '-session-update';
-          window.removeEventListener(eventName, this._signalReceived);
-        }
-
-        if (signalName) {
-          const eventName = this.signalName + '-session-update';
-          window.addEventListener(eventName, this._signalReceived);
-
-          const session = new Polymer.IronMeta({
-            type: signalName + 'session',
-            key: 'session'
-          }).value;
-
-          if (session) {
-            this._updateSession(session);
-          }
-        }
-      }
-
-      _signalReceived(event) {
-        this._updateSession(event.detail);
-      }
-
-      _updateSession({region, accessKeyId, secretKey, sessionToken, apiEndpoint, signedIn}) {
-        this.apiEndpoint = apiEndpoint;
-        this.region = region;
-
-        if (signedIn === false) {
-          this.accessKeyId = '';
-          this.secretKey = '';
-          this.sessionToken = '';
-        } else {
-          this.accessKeyId = accessKeyId;
-          this.secretKey = secretKey;
-          this.sessionToken = sessionToken;
-        }
-      }
-
-      _getOriginFromUrl(url) {
-        return /(^https?:\/\/[^\/]+)/g.exec(url)[1];
-      }
-
-      _getPathFromUrl(url) {
-        return /(^https?:\/\/[^\/]+)\/(.*)/g.exec(url)[2] || '';
-      }
-
-      _joinPath(...paths) {
-        const SLASH = '/';
-        return paths.join(SLASH).split(SLASH).filter(x => !!x).join(SLASH);
-      }
-
-      _computeUrl(apiEndpoint, path) {
-        if (apiEndpoint && path) {
-          return this._joinPath(apiEndpoint, path);
-        }
-      }
-
-      _generateDateString() {
-        return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
-          .replace(/[:\-]|\.\d{3}/g, '');
-      }
-
-      _generateSignedHeaders() {
-        const queryParams = this.params || {};
-        const headers = this.headers || {};
-        // let body = this.body;
-
-        headers['Content-Type'] = headers['Content-Type'] || this.contentType;
-        headers['Accept'] = headers['Accept'] || this.acceptType;
-
-        if (!this.body) {
-          delete headers['Content-Type'];
-        }
-
-        // // Override request body and set to empty when signing GET requests
-        // if (body === undefined || this.method === 'GET') {
-        //   body = '';
-        // } else {
-        //   body = JSON.stringify(body);
-        // }
-
-        // // If there is no body remove the content-type header so it is not
-        // // included in SigV4 calculation
-        // if (body === '' || body === undefined || body === null) {
-        //   delete headers['Content-Type'];
-        // }
-
-        const datetime = this._generateDateString();
-        headers['x-amz-date'] = datetime;
-
-        const origin = this._getOriginFromUrl(this.apiEndpoint);
-        const pathFromEndpoint = this._getPathFromUrl(this.apiEndpoint);
-        const path = '/' + this._joinPath(pathFromEndpoint, this.path);
-
-        const parser = document.createElement('a');
-        parser.href = origin;
-        headers['host'] = parser.hostname;
-
-        const method = this.method.toUpperCase();
-        const canonicalRequest = this._buildCanonicalRequest(method, path, queryParams, headers, this.body);
-        const hashedCanonicalRequest = this._hashCanonicalRequest(canonicalRequest);
-        const credentialScope = this._buildCredentialScope(datetime, this.region, 'execute-api');
-        const stringToSign = this._buildStringToSign(datetime, credentialScope, hashedCanonicalRequest);
-        const signingKey = this._calculateSigningKey(this.secretKey, datetime, this.region, 'execute-api');
-        const signature = this._calculateSignature(signingKey, stringToSign);
-
-        headers['Authorization'] = this._buildAuthorizationHeader(this.accessKeyId,
-          credentialScope, headers, signature);
-
-        if (this.sessionToken !== undefined && this.sessionToken !== '') {
-          headers['x-amz-security-token'] = this.sessionToken.trim();
-        }
-        delete headers['host'];
-
-        // Need to re-attach Content-Type if it is not specified at this point
-        if (headers['Content-Type'] === undefined && this.contentType) {
-          headers['Content-Type'] = this.contentType;
-        }
-        return headers;
-      }
-
-      _hash(value) {
-        return CryptoJS.SHA256(value);
-      }
-
-      _hexEncode(value) {
-        return value.toString(CryptoJS.enc.Hex);
-      }
-
-      _hmac(secret, value) {
-        return CryptoJS.HmacSHA256(value, secret, {asBytes: true});
-      }
-
-      _buildCanonicalRequest(method, path, queryParams, headers, payload) {
-        return method + '\n' +
-          this._buildCanonicalUri(path) + '\n' +
-          this._buildCanonicalQueryString(queryParams) + '\n' +
-          this._buildCanonicalHeaders(headers) + '\n' +
-          this._buildCanonicalSignedHeaders(headers) + '\n' +
-          this._hexEncode(this._hash(payload));
-      }
-
-      _buildCanonicalQueryString(queryParams) {
-        if (Object.keys(queryParams).length < 1) {
-          return '';
-        }
-
-        const sortedQueryParams = [];
-        for (let property in queryParams) {
-          if (queryParams.hasOwnProperty(property)) {
-            sortedQueryParams.push(property);
-          }
-        }
-        sortedQueryParams.sort();
-
-        let canonicalQueryString = '';
-        for (let i = 0; i < sortedQueryParams.length; i++) {
-          canonicalQueryString += sortedQueryParams[i] + '=' +
-            encodeURIComponent(queryParams[sortedQueryParams[i]]) + '&';
-        }
-        return canonicalQueryString.substr(0, canonicalQueryString.length - 1);
-      }
-
-      _buildCanonicalHeaders(headers) {
-        let canonicalHeaders = '';
-        let sortedKeys = [];
-
-        for (let property in headers) {
-          if (headers.hasOwnProperty(property)) {
-            sortedKeys.push(property);
-          }
-        }
-        sortedKeys.sort();
-
-        for (let i = 0; i < sortedKeys.length; i++) {
-          canonicalHeaders += sortedKeys[i].toLowerCase() + ':' +
-            headers[sortedKeys[i]] + '\n';
-        }
-        return canonicalHeaders;
-      }
-
-      _hashCanonicalRequest(request) {
-        return this._hexEncode(this._hash(request));
-      }
-
-      _buildCanonicalUri(uri) {
-        return encodeURI(uri);
-      }
-
-      _buildCanonicalSignedHeaders(headers) {
-        const sortedKeys = [];
-
-        for (let property in headers) {
-          if (headers.hasOwnProperty(property)) {
-            sortedKeys.push(property.toLowerCase());
-          }
-        }
-        return sortedKeys.sort().join(';');
-      }
-
-      _buildStringToSign(datetime, credentialScope, hashedCanonicalRequest) {
-        return 'AWS4-HMAC-SHA256' + '\n' +
-          datetime + '\n' +
-          credentialScope + '\n' +
-          hashedCanonicalRequest;
-      }
-
-      _buildCredentialScope(datetime, region, service) {
-        return `${datetime.substr(0, 8)}/${region}/${service}/aws4_request`
-      }
-
-      _calculateSigningKey(secretKey, datetime, region, service) {
-        return this._hmac(this._hmac(this._hmac(this._hmac(
-          'AWS4' + secretKey, datetime.substr(0, 8)), region), service),
-          'aws4_request');
-      }
-
-      _calculateSignature(key, stringToSign) {
-        return this._hexEncode(this._hmac(key, stringToSign));
-      }
-
-      _buildAuthorizationHeader(accessKeyId, credentialScope, headers, signature) {
-        const canonicalHeaders = this._buildCanonicalSignedHeaders(headers);
-        return 'AWS4-HMAC-SHA256' + ' Credential=' + accessKeyId +
-          '/' + credentialScope +
-          ', SignedHeaders=' + canonicalHeaders +
-          ', Signature=' + signature;
-      }
-
+      };
     }
 
-    customElements.define(AwsSv4.is, AwsSv4);
+    constructor() {
+      super();
+      this._signalReceived = this._signalReceived.bind(this);
+    }
 
-  </script>
-</dom-module>
+    connectedCallback() {
+      super.connectedCallback();
+    }
+
+    /**
+     * Performs the ajax request to the computed url of apiEndpoint + path
+     * generating the appropiate signature
+     *
+     * @return {Object} Promise that resolves to the response
+     */
+    generateRequest() {
+      if (this._url) {
+        // We can only sign request if all of this is defined
+        if (this.region && this.accessKeyId && this.secretKey &&this.sessionToken) {
+          this._signedHeaders = this._generateSignedHeaders();
+        }
+
+        const ironAjax = this._createAjaxElement();
+        return ironAjax.generateRequest().completes.then(res => {
+          return res.response;
+        }).catch(_ => {
+          throw ironAjax.lastError;
+        });
+      }
+
+      return Promise.reject(new Error('Invalid url'));
+    }
+
+    /**
+     * Creates a new aws-sv4-ajax element and sets the session
+     *
+     * @return {HTMLElement}
+     */
+    _createAjaxElement() {
+      const ajax = document.createElement('iron-ajax');
+      ajax.contentType = this.contentType || ajax.contentType;
+      ajax.handleAs = this.handleAs || ajax.handleAs;
+      ajax.headers = this._signedHeaders || ajax.headers;
+      ajax.loading = this.loading || ajax.loading;
+      ajax.method = this.method || ajax.method;
+      ajax.params = this.params || ajax.params;
+      ajax.sync = this.sync || ajax.sync;
+      ajax.bubbles = this.bubbles || ajax.bubbles;
+      ajax.url = this._url || ajax.url;
+      return ajax;
+    }
+
+    _signalNameChanged(signalName, old) {
+      if (old) {
+        const eventName = old + '-session-update';
+        window.removeEventListener(eventName, this._signalReceived);
+      }
+
+      if (signalName) {
+        const eventName = this.signalName + '-session-update';
+        window.addEventListener(eventName, this._signalReceived);
+
+        const session = new Polymer.IronMeta({
+          type: signalName + 'session',
+          key: 'session'
+        }).value;
+
+        if (session) {
+          this._updateSession(session);
+        }
+      }
+    }
+
+    _signalReceived(event) {
+      this._updateSession(event.detail);
+    }
+
+    _updateSession({region, accessKeyId, secretKey, sessionToken, apiEndpoint, signedIn}) {
+      this.apiEndpoint = apiEndpoint;
+      this.region = region;
+
+      if (signedIn === false) {
+        this.accessKeyId = '';
+        this.secretKey = '';
+        this.sessionToken = '';
+      } else {
+        this.accessKeyId = accessKeyId;
+        this.secretKey = secretKey;
+        this.sessionToken = sessionToken;
+      }
+    }
+
+    _getOriginFromUrl(url) {
+      return /(^https?:\/\/[^\/]+)/g.exec(url)[1];
+    }
+
+    _getPathFromUrl(url) {
+      return /(^https?:\/\/[^\/]+)\/(.*)/g.exec(url)[2] || '';
+    }
+
+    _joinPath(...paths) {
+      const SLASH = '/';
+      return paths.join(SLASH).split(SLASH).filter(x => !!x).join(SLASH);
+    }
+
+    _computeUrl(apiEndpoint, path) {
+      if (apiEndpoint && path) {
+        return this._joinPath(apiEndpoint, path);
+      }
+    }
+
+    _generateDateString() {
+      return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+        .replace(/[:\-]|\.\d{3}/g, '');
+    }
+
+    _generateSignedHeaders() {
+      const queryParams = this.params || {};
+      const headers = this.headers || {};
+      // let body = this.body;
+
+      headers['Content-Type'] = headers['Content-Type'] || this.contentType;
+      headers['Accept'] = headers['Accept'] || this.acceptType;
+
+      if (!this.body) {
+        delete headers['Content-Type'];
+      }
+
+      // // Override request body and set to empty when signing GET requests
+      // if (body === undefined || this.method === 'GET') {
+      //   body = '';
+      // } else {
+      //   body = JSON.stringify(body);
+      // }
+
+      // // If there is no body remove the content-type header so it is not
+      // // included in SigV4 calculation
+      // if (body === '' || body === undefined || body === null) {
+      //   delete headers['Content-Type'];
+      // }
+
+      const datetime = this._generateDateString();
+      headers['x-amz-date'] = datetime;
+
+      const origin = this._getOriginFromUrl(this.apiEndpoint);
+      const pathFromEndpoint = this._getPathFromUrl(this.apiEndpoint);
+      const path = '/' + this._joinPath(pathFromEndpoint, this.path);
+
+      const parser = document.createElement('a');
+      parser.href = origin;
+      headers['host'] = parser.hostname;
+
+      const method = this.method.toUpperCase();
+      const canonicalRequest = this._buildCanonicalRequest(method, path, queryParams, headers, this.body);
+      const hashedCanonicalRequest = this._hashCanonicalRequest(canonicalRequest);
+      const credentialScope = this._buildCredentialScope(datetime, this.region, 'execute-api');
+      const stringToSign = this._buildStringToSign(datetime, credentialScope, hashedCanonicalRequest);
+      const signingKey = this._calculateSigningKey(this.secretKey, datetime, this.region, 'execute-api');
+      const signature = this._calculateSignature(signingKey, stringToSign);
+
+      headers['Authorization'] = this._buildAuthorizationHeader(this.accessKeyId,
+        credentialScope, headers, signature);
+
+      if (this.sessionToken !== undefined && this.sessionToken !== '') {
+        headers['x-amz-security-token'] = this.sessionToken.trim();
+      }
+      delete headers['host'];
+
+      // Need to re-attach Content-Type if it is not specified at this point
+      if (headers['Content-Type'] === undefined && this.contentType) {
+        headers['Content-Type'] = this.contentType;
+      }
+      return headers;
+    }
+
+    _hash(value) {
+      return CryptoJS.SHA256(value);
+    }
+
+    _hexEncode(value) {
+      return value.toString(CryptoJS.enc.Hex);
+    }
+
+    _hmac(secret, value) {
+      return CryptoJS.HmacSHA256(value, secret, {asBytes: true});
+    }
+
+    _buildCanonicalRequest(method, path, queryParams, headers, payload) {
+      return method + '\n' +
+        this._buildCanonicalUri(path) + '\n' +
+        this._buildCanonicalQueryString(queryParams) + '\n' +
+        this._buildCanonicalHeaders(headers) + '\n' +
+        this._buildCanonicalSignedHeaders(headers) + '\n' +
+        this._hexEncode(this._hash(payload));
+    }
+
+    _buildCanonicalQueryString(queryParams) {
+      if (Object.keys(queryParams).length < 1) {
+        return '';
+      }
+
+      const sortedQueryParams = [];
+      for (let property in queryParams) {
+        if (queryParams.hasOwnProperty(property)) {
+          sortedQueryParams.push(property);
+        }
+      }
+      sortedQueryParams.sort();
+
+      let canonicalQueryString = '';
+      for (let i = 0; i < sortedQueryParams.length; i++) {
+        canonicalQueryString += sortedQueryParams[i] + '=' +
+          encodeURIComponent(queryParams[sortedQueryParams[i]]) + '&';
+      }
+      return canonicalQueryString.substr(0, canonicalQueryString.length - 1);
+    }
+
+    _buildCanonicalHeaders(headers) {
+      let canonicalHeaders = '';
+      let sortedKeys = [];
+
+      for (let property in headers) {
+        if (headers.hasOwnProperty(property)) {
+          sortedKeys.push(property);
+        }
+      }
+      sortedKeys.sort();
+
+      for (let i = 0; i < sortedKeys.length; i++) {
+        canonicalHeaders += sortedKeys[i].toLowerCase() + ':' +
+          headers[sortedKeys[i]] + '\n';
+      }
+      return canonicalHeaders;
+    }
+
+    _hashCanonicalRequest(request) {
+      return this._hexEncode(this._hash(request));
+    }
+
+    _buildCanonicalUri(uri) {
+      return encodeURI(uri);
+    }
+
+    _buildCanonicalSignedHeaders(headers) {
+      const sortedKeys = [];
+
+      for (let property in headers) {
+        if (headers.hasOwnProperty(property)) {
+          sortedKeys.push(property.toLowerCase());
+        }
+      }
+      return sortedKeys.sort().join(';');
+    }
+
+    _buildStringToSign(datetime, credentialScope, hashedCanonicalRequest) {
+      return 'AWS4-HMAC-SHA256' + '\n' +
+        datetime + '\n' +
+        credentialScope + '\n' +
+        hashedCanonicalRequest;
+    }
+
+    _buildCredentialScope(datetime, region, service) {
+      return `${datetime.substr(0, 8)}/${region}/${service}/aws4_request`
+    }
+
+    _calculateSigningKey(secretKey, datetime, region, service) {
+      return this._hmac(this._hmac(this._hmac(this._hmac(
+        'AWS4' + secretKey, datetime.substr(0, 8)), region), service),
+        'aws4_request');
+    }
+
+    _calculateSignature(key, stringToSign) {
+      return this._hexEncode(this._hmac(key, stringToSign));
+    }
+
+    _buildAuthorizationHeader(accessKeyId, credentialScope, headers, signature) {
+      const canonicalHeaders = this._buildCanonicalSignedHeaders(headers);
+      return 'AWS4-HMAC-SHA256' + ' Credential=' + accessKeyId +
+        '/' + credentialScope +
+        ', SignedHeaders=' + canonicalHeaders +
+        ', Signature=' + signature;
+    }
+
+  }
+
+  customElements.define(AwsSv4.is, AwsSv4);
+
+</script>
