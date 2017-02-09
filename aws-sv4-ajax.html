@@ -348,7 +348,7 @@ this.$.ajax.generateRequest().then(response => {
         delete headers['host'];
 
         // Need to re-attach Content-Type if it is not specified at this point
-        if (headers['Content-Type'] === undefined) {
+        if (headers['Content-Type'] === undefined && this.contentType) {
           headers['Content-Type'] = this.contentType;
         }
         return headers;
