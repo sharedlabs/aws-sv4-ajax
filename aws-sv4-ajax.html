@@ -331,7 +331,8 @@ this.$.ajax.generateRequest().then(response => {
         parser.href = origin;
         headers['host'] = parser.hostname;
 
-        const canonicalRequest = this._buildCanonicalRequest(this.method, path, queryParams, headers, this.body);
+        const method = this.method.toUpperCase();
+        const canonicalRequest = this._buildCanonicalRequest(method, path, queryParams, headers, this.body);
         const hashedCanonicalRequest = this._hashCanonicalRequest(canonicalRequest);
         const credentialScope = this._buildCredentialScope(datetime, this.region, 'execute-api');
         const stringToSign = this._buildStringToSign(datetime, credentialScope, hashedCanonicalRequest);
@@ -345,8 +346,6 @@ this.$.ajax.generateRequest().then(response => {
           headers['x-amz-security-token'] = this.sessionToken.trim();
         }
         delete headers['host'];
-
-        const queryString = this._buildCanonicalQueryString(queryParams);
 
         // Need to re-attach Content-Type if it is not specified at this point
         if (headers['Content-Type'] === undefined) {
