@@ -275,7 +275,7 @@ this.$.ajax.generateRequest().then(response => {
         window.addEventListener(eventName, this._signalReceived);
 
         const session = new Polymer.IronMeta({
-          type: signalName + 'session',
+          type: signalName + '-session',
           key: 'session'
         }).value;
 
