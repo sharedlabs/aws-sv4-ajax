@@ -1,5 +1,6 @@
 <link rel="import" href="../polymer/polymer-element.html">
 <link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../iron-meta/iron-meta.html">
 <link rel="import" href="./hmac-sha256.html">
 
 <!--
@@ -209,10 +210,6 @@ this.$.ajax.generateRequest().then(response => {
         this._signalReceived = this._signalReceived.bind(this);
       }
 
-      connectedCallback() {
-        super.connectedCallback();
-      }
-
       /**
        * Performs the ajax request to the computed url of apiEndpoint + path
        * generating the appropiate signature
@@ -236,20 +233,30 @@ this.$.ajax.generateRequest().then(response => {
 
       _signalNameChanged(signalName, old) {
         if (old) {
-          const eventName = 'session-updated-' + old;
+          const eventName = old + '-session-update';
           window.removeEventListener(eventName, this._signalReceived);
         }
 
         if (signalName) {
-          const eventName = 'session-updated-' + this.signalName;
+          const eventName = this.signalName + '-session-update';
           window.addEventListener(eventName, this._signalReceived);
+
+          const session = new Polymer.IronMeta({
+            type: signalName + 'session',
+            key: 'session'
+          }).value;
+
+          if (session) {
+            this._updateSession(session);
+          }
         }
       }
 
       _signalReceived(event) {
-        const {region, accessKeyId, secretKey, sessionToken,
-          apiEndpoint, signedIn} = event.detail;
+        this._updateSession(event.detail);
+      }
 
+      _updateSession({region, accessKeyId, secretKey, sessionToken, apiEndpoint, signedIn}) {
         this.apiEndpoint = apiEndpoint;
         this.region = region;
 
