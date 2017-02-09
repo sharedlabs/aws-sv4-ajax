@@ -163,6 +163,7 @@ this.$.ajax.generateRequest().then(response => {
           loading: {
             type: Boolean,
             notify: true,
+            readOnly :true,
           },
 
           /**
@@ -181,8 +182,14 @@ this.$.ajax.generateRequest().then(response => {
           },
 
           _signedHeaders: {
-            type: Object
-          }
+            type: Object,
+          },
+
+          _requests: {
+            type: Number,
+            value: 0,
+            observer: '_requestsChanged'
+          },
 
         }
       };
@@ -191,6 +198,7 @@ this.$.ajax.generateRequest().then(response => {
     constructor() {
       super();
       this._signalReceived = this._signalReceived.bind(this);
+      this._requestsChangedTimeout = null;
     }
 
     connectedCallback() {
@@ -211,14 +219,29 @@ this.$.ajax.generateRequest().then(response => {
         }
 
         const ironAjax = this._createAjaxElement();
-        return ironAjax.generateRequest().completes.then(res => {
-          return res.response;
-        }).catch(_ => {
-          throw ironAjax.lastError;
-        });
+        this._requests ++;
+
+        try {
+          return ironAjax.generateRequest().completes.then(res => {
+            this._requests--;
+            return res.response;
+          }).catch(_ => {
+            this._requests--;
+            throw ironAjax.lastError;
+          });
+        } catch (err) {
+          err.status = 0;
+          err.response = {message: err.toString()};
+          this._requests--;
+          return Promise.reject(err);
+        }
       }
 
-      return Promise.reject(new Error('Invalid url'));
+      // Form a message alike iron ajax responses
+      const err = new Error('Invalid url');
+      err.status = 0;
+      err.response = {message: 'Invalid url'};
+      return Promise.reject(err);
     }
 
     /**
@@ -231,9 +254,9 @@ this.$.ajax.generateRequest().then(response => {
       ajax.contentType = this.contentType || ajax.contentType;
       ajax.handleAs = this.handleAs || ajax.handleAs;
       ajax.headers = this._signedHeaders || ajax.headers;
-      ajax.loading = this.loading || ajax.loading;
       ajax.method = this.method || ajax.method;
       ajax.params = this.params || ajax.params;
+      ajax.body = this.body || ajax.body;
       ajax.sync = this.sync || ajax.sync;
       ajax.bubbles = this.bubbles || ajax.bubbles;
       ajax.url = this._url || ajax.url;
@@ -299,6 +322,20 @@ this.$.ajax.generateRequest().then(response => {
       }
     }
 
+    _requestsChanged() {
+      this._updateLoadingStatus();
+    }
+
+    _updateLoadingStatus() {
+      const waitTime = this._requestsChangedTimeout ? 32 : 0;
+
+      clearTimeout(this._requestsChangedTimeout);
+
+      this._requestsChangedTimeout = setTimeout(_ => {
+        this._setLoading(this._requests > 0);
+      }, waitTime);
+    }
+
     _generateDateString() {
       return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
         .replace(/[:\-]|\.\d{3}/g, '');
@@ -307,27 +344,16 @@ this.$.ajax.generateRequest().then(response => {
     _generateSignedHeaders() {
       const queryParams = this.params || {};
       const headers = this.headers || {};
-      // let body = this.body;
+      let body = '';
 
-      headers['Content-Type'] = headers['Content-Type'] || this.contentType;
+      headers['content-type'] = headers['content-type'] || this.contentType;
       headers['Accept'] = headers['Accept'] || this.acceptType;
 
       if (!this.body) {
-        delete headers['Content-Type'];
+        delete headers['content-type'];
+      } else {
+        body = JSON.stringify(this.body);
       }
-
-      // // Override request body and set to empty when signing GET requests
-      // if (body === undefined || this.method === 'GET') {
-      //   body = '';
-      // } else {
-      //   body = JSON.stringify(body);
-      // }
-
-      // // If there is no body remove the content-type header so it is not
-      // // included in SigV4 calculation
-      // if (body === '' || body === undefined || body === null) {
-      //   delete headers['Content-Type'];
-      // }
 
       const datetime = this._generateDateString();
       headers['x-amz-date'] = datetime;
@@ -340,8 +366,9 @@ this.$.ajax.generateRequest().then(response => {
       parser.href = origin;
       headers['host'] = parser.hostname;
 
+
       const method = this.method.toUpperCase();
-      const canonicalRequest = this._buildCanonicalRequest(method, path, queryParams, headers, this.body);
+      const canonicalRequest = this._buildCanonicalRequest(method, path, queryParams, headers, body);
       const hashedCanonicalRequest = this._hashCanonicalRequest(canonicalRequest);
       const credentialScope = this._buildCredentialScope(datetime, this.region, 'execute-api');
       const stringToSign = this._buildStringToSign(datetime, credentialScope, hashedCanonicalRequest);
@@ -356,9 +383,11 @@ this.$.ajax.generateRequest().then(response => {
       }
       delete headers['host'];
 
-      // Need to re-attach Content-Type if it is not specified at this point
-      if (headers['Content-Type'] === undefined && this.contentType) {
-        headers['Content-Type'] = this.contentType;
+      // Need to re-attach content-type if it is not specified at this point
+      if (headers['content-type'] === undefined) {
+        if (this.contentType) {
+          headers['content-type'] = this.contentType;
+        }
       }
       return headers;
     }
