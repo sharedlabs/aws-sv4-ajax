@@ -224,7 +224,7 @@ this.$.ajax.generateRequest().then(response => {
           }
 
           return this.$.ironAjax.generateRequest().completes.then(res => {
-            return this.$.ironAjax.lastResponse;
+            return res.response;
           });
         }
 
