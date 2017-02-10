@@ -252,15 +252,33 @@ this.$.ajax.generateRequest().then(response => {
      */
     _createAjaxElement() {
       const ajax = document.createElement('iron-ajax');
+      const headers = {};
+
+      // Clean not defined headers or iron request will fail
+      Object.keys(this._signedHeaders).forEach(headerName => {
+        if (this._signedHeaders[headerName]) {
+          headers[headerName] = this._signedHeaders[headerName];
+        }
+      });
+
+      ajax.params = this.params;
+      ajax.body = this.body;
+      ajax.url = this._url;
+      ajax.headers = headers;
+
+      // If not defined, use default values
       ajax.contentType = this.contentType || ajax.contentType;
       ajax.handleAs = this.handleAs || ajax.handleAs;
-      ajax.headers = this._signedHeaders || ajax.headers;
       ajax.method = String(this.method || ajax.method).toUpperCase();
-      ajax.params = this.params || ajax.params;
-      ajax.body = this.body || ajax.body;
-      ajax.sync = this.sync || ajax.sync;
-      ajax.bubbles = this.bubbles || ajax.bubbles;
-      ajax.url = this._url || ajax.url;
+
+      if (typeof this.sync === 'boolean') {
+        ajax.sync = this.sync;
+      }
+
+      if (typeof this.bubbles === 'boolean') {
+        ajax.bubbles = this.bubbles;
+      }
+
       return ajax;
     }
 
@@ -366,7 +384,6 @@ this.$.ajax.generateRequest().then(response => {
       const parser = document.createElement('a');
       parser.href = origin;
       headers['host'] = parser.hostname;
-
 
       const method = this.method.toUpperCase();
       const canonicalRequest = this._buildCanonicalRequest(method, path, queryParams, headers, body);
