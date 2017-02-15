@@ -47,7 +47,10 @@ this.$.ajax.generateRequest().then(response => {
            *
            * @type {String}
            */
-          apiEndpoint: String,
+          apiEndpoint: {
+            type: String,
+            notify: true,
+          },
 
           /**
            * AWS api endpoint region. If not passed a non signed request
@@ -238,7 +241,7 @@ this.$.ajax.generateRequest().then(response => {
       }
 
       // Form a message alike iron ajax responses
-      const msg = 'Invalid url endpoint: ${this.apiEndpoint} path: ${this.path}';
+      const msg = `Invalid url endpoint: ${this.apiEndpoint} path: ${this.path}`;
       const err = new Error(msg);
       err.status = 0;
       err.response = {message: msg};
@@ -255,11 +258,13 @@ this.$.ajax.generateRequest().then(response => {
       const headers = {};
 
       // Clean not defined headers or iron request will fail
-      Object.keys(this._signedHeaders).forEach(headerName => {
-        if (this._signedHeaders[headerName]) {
-          headers[headerName] = this._signedHeaders[headerName];
-        }
-      });
+      if (this._signedHeaders) {
+        Object.keys(this._signedHeaders).forEach(headerName => {
+          if (this._signedHeaders[headerName]) {
+            headers[headerName] = this._signedHeaders[headerName];
+          }
+        });
+      }
 
       ajax.params = this.params;
       ajax.body = this.body;
