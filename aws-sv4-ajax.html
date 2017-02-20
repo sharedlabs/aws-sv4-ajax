@@ -58,7 +58,10 @@ this.$.ajax.generateRequest().then(response => {
            *
            * @type {String?}
            */
-          region: String,
+          region: {
+            type: String,
+            notify: true,
+          },
 
           /**
            * User session AccessKeyId. If not passed a non signed request
@@ -66,7 +69,10 @@ this.$.ajax.generateRequest().then(response => {
            *
            * @type {String?}
            */
-          accessKeyId: String,
+          accessKeyId: {
+            type: String,
+            notify: true,
+          },
 
           /**
            * User session secretKey. If not passed a non signed request
@@ -74,7 +80,10 @@ this.$.ajax.generateRequest().then(response => {
            *
            * @type {String?}
            */
-          secretKey: String,
+          secretKey: {
+            type: String,
+            notify: true,
+          },
 
           /**
            * User session token. If not passed a non signed request
@@ -82,7 +91,10 @@ this.$.ajax.generateRequest().then(response => {
            *
            * @type {String?}
            */
-          sessionToken: String,
+          sessionToken: {
+            type: String,
+            notify: true,
+          },
 
           /**
            * Accept type header
