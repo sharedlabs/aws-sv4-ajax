@@ -349,7 +349,11 @@ this.$.ajax.generateRequest().then(response => {
 
     _joinPath(...paths) {
       const SLASH = '/';
-      return paths.join(SLASH).split(SLASH).filter(x => !!x).join(SLASH);
+      const parts = paths.join(SLASH).split(SLASH).filter(x => !!x);
+      if (parts[0].match(/http/)) {
+        parts.splice(1, 0, '');
+      }
+      return parts.join(SLASH);
     }
 
     _computeUrl(apiEndpoint, path) {
