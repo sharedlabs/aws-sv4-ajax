@@ -97,6 +97,15 @@ this.$.ajax.generateRequest().then(response => {
           },
 
           /**
+           * Session is valid up to this date.
+           * @type {Date}
+           */
+          sessionExpiration: {
+            type: Date,
+            notify: true,
+          },
+
+          /**
            * Accept type header
            *
            * @type {String?}
@@ -229,7 +238,7 @@ this.$.ajax.generateRequest().then(response => {
     generateRequest() {
       if (this._url) {
         // We can only sign request if all of this is defined
-        if (this.region && this.accessKeyId && this.secretKey &&this.sessionToken) {
+        if (this.region && this.accessKeyId && this.secretKey && this.sessionToken) {
           this._signedHeaders = this._generateSignedHeaders();
         }
 
@@ -324,7 +333,7 @@ this.$.ajax.generateRequest().then(response => {
       this._updateSession(event.detail);
     }
 
-    _updateSession({region, accessKeyId, secretKey, sessionToken, apiEndpoint, signedIn}) {
+    _updateSession({region, accessKeyId, secretKey, sessionToken, sessionExpiration, apiEndpoint, signedIn}) {
       this.apiEndpoint = apiEndpoint;
       this.region = region;
 
@@ -332,10 +341,12 @@ this.$.ajax.generateRequest().then(response => {
         this.accessKeyId = '';
         this.secretKey = '';
         this.sessionToken = '';
+        this.sessionExpiration = null;
       } else {
         this.accessKeyId = accessKeyId;
         this.secretKey = secretKey;
         this.sessionToken = sessionToken;
+        this.sessionExpiration = sessionExpiration;
       }
     }
 
