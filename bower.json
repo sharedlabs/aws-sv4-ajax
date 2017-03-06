@@ -3,7 +3,7 @@
   "description": "Iron-Ajax wrapper for signing requests for AWS private APIG endpoints",
   "main": "aws-sv4-ajax.html",
   "dependencies": {
-    "polymer": "Polymer/polymer#2.0-preview"
+    "polymer": "git@github.com:Polymer/polymer#v2.0.0-rc.1"
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#2.0-preview",

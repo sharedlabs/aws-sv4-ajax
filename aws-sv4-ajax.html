@@ -38,184 +38,182 @@ this.$.ajax.generateRequest().then(response => {
 
     static get is() {return 'aws-sv4-ajax';}
 
-    static get config() {
+    static get properties() {
       return {
-        properties: {
 
-          /**
-           * Api endpoint
-           *
-           * @type {String}
-           */
-          apiEndpoint: {
-            type: String,
-            notify: true,
-          },
+        /**
+         * Api endpoint
+         *
+         * @type {String}
+         */
+        apiEndpoint: {
+          type: String,
+          notify: true,
+        },
 
-          /**
-           * AWS api endpoint region. If not passed a non signed request
-           * will be performed.
-           *
-           * @type {String?}
-           */
-          region: {
-            type: String,
-            notify: true,
-          },
+        /**
+         * AWS api endpoint region. If not passed a non signed request
+         * will be performed.
+         *
+         * @type {String?}
+         */
+        region: {
+          type: String,
+          notify: true,
+        },
 
-          /**
-           * User session AccessKeyId. If not passed a non signed request
-           * will be performed.
-           *
-           * @type {String?}
-           */
-          accessKeyId: {
-            type: String,
-            notify: true,
-          },
+        /**
+         * User session AccessKeyId. If not passed a non signed request
+         * will be performed.
+         *
+         * @type {String?}
+         */
+        accessKeyId: {
+          type: String,
+          notify: true,
+        },
 
-          /**
-           * User session secretKey. If not passed a non signed request
-           * will be performed.
-           *
-           * @type {String?}
-           */
-          secretKey: {
-            type: String,
-            notify: true,
-          },
+        /**
+         * User session secretKey. If not passed a non signed request
+         * will be performed.
+         *
+         * @type {String?}
+         */
+        secretKey: {
+          type: String,
+          notify: true,
+        },
 
-          /**
-           * User session token. If not passed a non signed request
-           * will be performed.
-           *
-           * @type {String?}
-           */
-          sessionToken: {
-            type: String,
-            notify: true,
-          },
+        /**
+         * User session token. If not passed a non signed request
+         * will be performed.
+         *
+         * @type {String?}
+         */
+        sessionToken: {
+          type: String,
+          notify: true,
+        },
 
-          /**
-           * Session is valid up to this date.
-           * @type {Date}
-           */
-          sessionExpiration: {
-            type: Date,
-            notify: true,
-          },
+        /**
+         * Session is valid up to this date.
+         * @type {Date}
+         */
+        sessionExpiration: {
+          type: Date,
+          notify: true,
+        },
 
-          /**
-           * Accept type header
-           *
-           * @type {String?}
-           */
-          acceptType: {
-            type: String,
-            value: 'application/json',
-          },
+        /**
+         * Accept type header
+         *
+         * @type {String?}
+         */
+        acceptType: {
+          type: String,
+          value: 'application/json',
+        },
 
-          /**
-           * Path from the api endpoint
-           *
-           * @type {String}
-           */
-          path: String,
+        /**
+         * Path from the api endpoint
+         *
+         * @type {String}
+         */
+        path: String,
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {String}
-           */
-          method: String,
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {String}
+         */
+        method: String,
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {Object}
-           */
-          params: Object,
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {Object}
+         */
+        params: Object,
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {Object}
-           */
-          body: Object,
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {Object}
+         */
+        body: Object,
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {Object}
-           */
-          headers: Object,
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {Object}
+         */
+        headers: Object,
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {String}
-           */
-          contentType: {
-            type: String,
-            value: 'application/json',
-          },
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {String}
+         */
+        contentType: {
+          type: String,
+          value: 'application/json',
+        },
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {String}
-           */
-          handleAs: String,
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {String}
+         */
+        handleAs: String,
 
-          /**
-           * More info on iron-ajax doc.
-           *
-           * @type {Boolean}
-           */
-          sync: Boolean,
+        /**
+         * More info on iron-ajax doc.
+         *
+         * @type {Boolean}
+         */
+        sync: Boolean,
 
-          bubbles: {
-            type: Boolean,
-            value: false,
-          },
+        bubbles: {
+          type: Boolean,
+          value: false,
+        },
 
-          /**
-           * True while there is a request in flight
-           *
-           * @type {Boolean}
-           */
-          loading: {
-            type: Boolean,
-            notify: true,
-            readOnly :true,
-          },
+        /**
+         * True while there is a request in flight
+         *
+         * @type {Boolean}
+         */
+        loading: {
+          type: Boolean,
+          notify: true,
+          readOnly :true,
+        },
 
-          /**
-           * When defined, it will listen to session-update-${signalName}
-           * and update session params based on the event data
-           * @type {String}
-           */
-          signalName: {
-            type: String,
-            observer: '_signalNameChanged'
-          },
+        /**
+         * When defined, it will listen to session-update-${signalName}
+         * and update session params based on the event data
+         * @type {String}
+         */
+        signalName: {
+          type: String,
+          observer: '_signalNameChanged'
+        },
 
-          _url: {
-            type: String,
-            computed: '_computeUrl(apiEndpoint, path)',
-          },
+        _url: {
+          type: String,
+          computed: '_computeUrl(apiEndpoint, path)',
+        },
 
-          _signedHeaders: {
-            type: Object,
-          },
+        _signedHeaders: {
+          type: Object,
+        },
 
-          _requests: {
-            type: Number,
-            value: 0,
-            observer: '_requestsChanged'
-          },
-
+        _requests: {
+          type: Number,
+          value: 0,
+          observer: '_requestsChanged'
         }
+
       };
     }
 
