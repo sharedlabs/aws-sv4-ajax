@@ -353,7 +353,7 @@ this.$.ajax.generateRequest().then(response => {
     }
 
     _getPathFromUrl(url) {
-      return /(^https?:\/\/[^\/]+)\/(.*)/g.exec(url)[2] || '';
+      return (/(^https?:\/\/[^\/]+)\/(.*)/g.exec(url) || [])[2] || '';
     }
 
     _joinPath(...paths) {
